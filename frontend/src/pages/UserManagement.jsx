@@ -13,7 +13,7 @@ const UserManagement = () => {
     const fetchUsers = async () => {
         try {
             const { data } = await api.get('/admin/users');
-            setUsers(data);
+            setUsers(Array.isArray(data) ? data : []);
         } catch (error) {
             toast.error('Failed to fetch users');
         } finally {

@@ -2,8 +2,12 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const crypto = require('crypto');
 const sendEmail = require('../utils/sendEmail');
+const mongoose = require('mongoose');
 
 const generateToken = (id) => {
+    if (!process.env.JWT_SECRET) {
+        throw new Error('JWT_SECRET is missing from environment variables');
+    }
     return jwt.sign({ id }, process.env.JWT_SECRET, {
         expiresIn: '30d'
     });
@@ -38,6 +42,50 @@ exports.registerUser = async (req, res) => {
                 role: user.role,
                 status: user.status
             });
+
+            // Create notification for admin
+            const Notification = mongoose.model('Notification');
+            await Notification.create({
+                type: 'registration',
+                message: `New portal access request from ${name} (${email}).`,
+                userId: user._id
+            });
+
+            // Send email to admin if configured
+            if (process.env.ADMIN_NOTIFICATION_EMAIL) {
+                try {
+                    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+                    const htmlMessage = `
+                    <div style="font-family: 'Inter', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 2px solid #000; padding: 40px; background-color: #fff; text-align: left;">
+                        <h2 style="font-size: 24px; font-weight: 900; text-transform: uppercase; margin-bottom: 20px; color: #000;">New Member Request.</h2>
+                        <p style="font-size: 16px; color: #555; line-height: 1.6; margin-bottom: 30px;">
+                            A new user has registered and is pending approval:
+                        </p>
+                        <div style="background: #f9f9f9; border: 1px solid #eee; padding: 20px; margin-bottom: 30px;">
+                            <p style="margin: 0 0 10px 0; font-size: 14px;"><strong>Name:</strong> ${name}</p>
+                            <p style="margin: 0; font-size: 14px;"><strong>Email:</strong> ${email}</p>
+                        </div>
+                        <p style="font-size: 16px; color: #555; line-height: 1.6; margin-bottom: 30px;">
+                            Please log in to the admin dashboard to review their request.
+                        </p>
+                        <a href="${frontendUrl}/admin-dashboard" style="display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 20px 40px; font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; border: 2px solid #000; box-shadow: 6px 6px 0px #ff3e3e;">
+                            Admin Dashboard
+                        </a>
+                        <p style="margin-top: 50px; font-size: 10px; color: #aaa; text-transform: uppercase; letter-spacing: 1px;">
+                            HO SOCIAL SYSTEM ALERT
+                        </p>
+                    </div>
+                    `;
+
+                    await sendEmail({
+                        email: process.env.ADMIN_NOTIFICATION_EMAIL,
+                        subject: 'ALERT: New User Registration',
+                        html: htmlMessage
+                    });
+                } catch (err) {
+                    console.error('Admin notification email failed:', err.message);
+                }
+            }
         } else {
             res.status(400).json({ message: 'Invalid user data' });
         }
@@ -58,6 +106,26 @@ exports.loginUser = async (req, res) => {
 
         if (user && (await user.comparePassword(password, user.password))) {
             if (user.status !== 'approved') {
+                // Notifiy admin of login attempt from pending user
+                const Notification = mongoose.model('Notification');
+                await Notification.create({
+                    type: 'login_attempt',
+                    message: `Pending user ${user.name} (${user.email}) attempted to log in.`,
+                    userId: user._id
+                });
+
+                if (process.env.ADMIN_NOTIFICATION_EMAIL) {
+                    try {
+                        await sendEmail({
+                            email: process.env.ADMIN_NOTIFICATION_EMAIL,
+                            subject: 'ALERT: Pending User Login Attempt',
+                            message: `User ${user.name} (${user.email}) is trying to access the portal but their status is: ${user.status}.\n\nPlease review their account status.`
+                        });
+                    } catch (err) {
+                        console.error('Admin notification email failed:', err.message);
+                    }
+                }
+
                 return res.status(401).json({ message: 'Account pending admin approval' });
             }
 

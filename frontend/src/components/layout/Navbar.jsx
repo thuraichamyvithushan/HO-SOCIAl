@@ -10,23 +10,31 @@ const Navbar = ({ toggleSidebar }) => {
     const [notifications, setNotifications] = useState({ unreadCount: 0, latestComments: [] });
     const [showDropdown, setShowDropdown] = useState(false);
 
+    const fetchNotifications = async () => {
+        try {
+            const endpoint = user.role === 'admin' ? '/notifications/admin' : '/comments/user/notifications';
+            const { data } = await api.get(endpoint);
+            setNotifications(data);
+        } catch (err) {
+            console.error('Failed to fetch notifications');
+        }
+    };
+
     useEffect(() => {
         if (!user) return;
-
-        const fetchNotifications = async () => {
-            try {
-                const endpoint = user.role === 'admin' ? '/comments/admin/notifications' : '/comments/user/notifications';
-                const { data } = await api.get(endpoint);
-                setNotifications(data);
-            } catch (err) {
-                console.error('Failed to fetch notifications');
-            }
-        };
-
         fetchNotifications();
         const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
         return () => clearInterval(interval);
     }, [user]);
+
+    const handleMarkAsRead = async (id, type) => {
+        try {
+            await api.put('/notifications/read', { id, type });
+            fetchNotifications();
+        } catch (err) {
+            console.error('Failed to mark as read');
+        }
+    };
 
     return (
         <header className="fixed top-0 right-0 left-0 h-16 md:h-20 bg-white/80 backdrop-blur-md z-40 px-4 md:px-10 flex items-center justify-between transition-all duration-300">
@@ -83,21 +91,28 @@ const Navbar = ({ toggleSidebar }) => {
                                             notifications.latestComments.map((note) => (
                                                 <Link
                                                     key={note._id}
-                                                    to={`/post/${note.postId}`}
-                                                    onClick={() => setShowDropdown(false)}
+                                                    to={note.type === 'reply' ? `/post/${note.postId}` : "/admin-dashboard"}
+                                                    onClick={() => {
+                                                        setShowDropdown(false);
+                                                        handleMarkAsRead(note._id, note.type);
+                                                    }}
                                                     className="block p-5 border-b border-gray-50 hover:bg-gray-50 transition-all group"
                                                 >
                                                     <div className="flex items-center justify-between mb-2">
                                                         <span className="text-[10px] font-bold text-primary-600 tracking-tight uppercase">
-                                                            {note.type === 'new_assignment' ? 'New Briefing' : 'New Reply'}
+                                                            {note.type === 'new_assignment' ? 'New Briefing' :
+                                                                note.type === 'registration' ? 'New Registration' :
+                                                                    note.type === 'login_attempt' ? 'Login Attempt' : 'New Reply'}
                                                         </span>
                                                         <span className="text-[9px] font-medium text-gray-400">
                                                             {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                         </span>
                                                     </div>
-                                                    <h4 className="text-xs font-bold text-gray-900 mb-1 group-hover:text-primary-600 transition-colors">{note.postTitle}</h4>
+                                                    <h4 className="text-xs font-bold text-gray-900 mb-1 group-hover:text-primary-600 transition-colors uppercase tracking-tighter">{note.postTitle}</h4>
                                                     <p className="text-[11px] text-gray-500 line-clamp-1 mb-2">
-                                                        {note.type === 'new_assignment' ? `From: ${note.userName}` : `${note.userName}: "${note.comment}"`}
+                                                        {note.type === 'new_assignment' ? `From: ${note.userName}` :
+                                                            note.type === 'registration' || note.type === 'login_attempt' ? note.comment :
+                                                                `${note.userName}: "${note.comment}"`}
                                                     </p>
                                                 </Link>
                                             ))

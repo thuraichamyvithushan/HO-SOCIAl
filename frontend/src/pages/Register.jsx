@@ -82,7 +82,7 @@ const Register = () => {
                             <input
                                 type="email"
                                 required
-                                placeholder="name@system.ho"
+                                placeholder="example@huntsmanoptics.com"
                                 className="input-field"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}

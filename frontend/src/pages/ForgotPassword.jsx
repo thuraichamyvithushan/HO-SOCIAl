@@ -51,7 +51,7 @@ const ForgotPassword = () => {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full h-14 px-5 border-2 border-black focus:bg-gray-50 transition-all font-bold text-sm outline-none"
-                                placeholder="name@company.com"
+                                placeholder="example@huntsmanoptics.com"
                             />
                         </div>
 

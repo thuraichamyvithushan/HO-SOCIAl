@@ -6,11 +6,18 @@ const morgan = require('morgan');
 const path = require('path');
 const connectDB = require('./config/db');
 
+// Models
+require('./models/User');
+require('./models/Post');
+require('./models/Comment');
+require('./models/Notification');
+
 // Route files
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const postRoutes = require('./routes/postRoutes');
 const commentRoutes = require('./routes/commentRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 dotenv.config();
 
@@ -26,6 +33,8 @@ app.use(express.json());
 const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:3000',
+    'https://hosocial-five.vercel.app',
+    'https://ho-soci-al.vercel.app',
     process.env.CLIENT_URL // For production Vercel URL
 ].filter(Boolean);
 
@@ -69,6 +78,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/comments', commentRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Centralized Error Handler
 app.use((err, req, res, next) => {

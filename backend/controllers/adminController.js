@@ -27,10 +27,27 @@ exports.updateUserStatus = async (req, res) => {
 
             if (status === 'approved') {
                 try {
+                    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+                    const htmlMessage = `
+                    <div style="font-family: 'Inter', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 2px solid #000; padding: 40px; background-color: #fff; text-align: left;">
+                        <h2 style="font-size: 24px; font-weight: 900; text-transform: uppercase; margin-bottom: 20px; color: #000;">Account Approved.</h2>
+                        <p style="font-size: 16px; color: #555; line-height: 1.6; margin-bottom: 30px;">
+                            Hello ${user.name},<br><br>
+                            Your account has been approved by the administrator. You can now log in to the platform.
+                        </p>
+                        <a href="${frontendUrl}/login" style="display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 20px 40px; font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; border: 2px solid #000; box-shadow: 6px 6px 0px #ff3e3e;">
+                            Login Now
+                        </a>
+                        <p style="margin-top: 50px; font-size: 10px; color: #aaa; text-transform: uppercase; letter-spacing: 1px;">
+                            Best regards,<br>HO SOCIAL Team
+                        </p>
+                    </div>
+                    `;
+
                     await sendEmail({
                         email: user.email,
                         subject: 'Account Approved - HO SOCIAL',
-                        message: `Hello ${user.name},\n\nYour account has been approved by the administrator. You can now log in to the platform.\n\nBest regards,\nHO SOCIAL Team`
+                        html: htmlMessage
                     });
                 } catch (err) {
                     console.error('Email failed to send:', err.message);

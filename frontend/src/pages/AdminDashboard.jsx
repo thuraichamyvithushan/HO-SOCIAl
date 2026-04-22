@@ -53,7 +53,7 @@ const AdminDashboard = () => {
         const fetchStats = async () => {
             try {
                 const usersRes = await api.get('/admin/users');
-                const allUsersData = usersRes.data;
+                const allUsersData = Array.isArray(usersRes.data) ? usersRes.data : [];
                 setAllUsers(allUsersData.filter(u => u.status === 'approved' && u.role === 'user'));
                 const pending = allUsersData.filter(u => u.status === 'pending');
                 setStats(prev => ({
@@ -67,7 +67,7 @@ const AdminDashboard = () => {
         const fetchActivity = async () => {
             try {
                 const { data } = await api.get('/posts/admin/recent-activity');
-                setRecentActivity(data);
+                setRecentActivity(Array.isArray(data) ? data : []);
             } catch { console.error('Failed to fetch recent activity'); }
         };
 
@@ -83,9 +83,11 @@ const AdminDashboard = () => {
                 api.get('/posts/admin'),
                 api.get('/posts/admin/archived')
             ]);
-            setActivePosts(activeRes.data);
-            setArchivedPosts(archivedRes.data);
-            const all = [...activeRes.data, ...archivedRes.data];
+            setActivePosts(Array.isArray(activeRes.data) ? activeRes.data : []);
+            setArchivedPosts(Array.isArray(archivedRes.data) ? archivedRes.data : []);
+            const activeData = Array.isArray(activeRes.data) ? activeRes.data : [];
+            const archivedData = Array.isArray(archivedRes.data) ? archivedRes.data : [];
+            const all = [...activeData, ...archivedData];
             setStats(prev => ({
                 ...prev,
                 totalPosts: all.length,
